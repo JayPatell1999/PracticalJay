@@ -1,0 +1,5 @@
+<channelGroups xmlns:tools="http://schemas.android.com/tools">
+    <channelGroup
+        id="medicine"
+        name="Medicine Reminders" />
+</channelGroups>

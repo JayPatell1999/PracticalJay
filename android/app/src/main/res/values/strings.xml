@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">PracticalJay</string>
+    <string name="str_welcome_back">WELCOME BACK</string>
+    <string name="str_account_login">Account Log In</string>
+    <string name="txt_email">Email</string>
+    <string name="txt_password">Password</string>
+    <string name="str_login">Login</string>
+</resources>
