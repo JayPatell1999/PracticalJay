@@ -54,5 +54,5 @@ This application is built using React Native with native Android integration for
 The app is structured in modular screens and hooks to promote clean architecture and separation of concerns.
 
 ## 📹 Demo Video
-[Click here to watch the demo]([https://drive.google.com/file/d/your-id/view?usp=sharing](https://drive.google.com/file/d/1OZkLJWA78nfHdd6r_JJ4zsuOj-WSEUkx/view?usp=sharing))
+[Click here to watch the demo](https://drive.google.com/file/d/1OZkLJWA78nfHdd6r_JJ4zsuOj-WSEUkx/view?usp=sharing)
 
