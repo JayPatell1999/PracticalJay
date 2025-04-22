@@ -31,6 +31,7 @@ A mobile app that tracks user activity and environmental data using the phone’
 
 ## ⚠️ Known Issue
 - Location-based path tracking crashes due to dependency conflicts on some devices. This is under investigation.
+- Light and pressure measurement does not work correctly as of now.
 
 ## 🛠 Setup Instructions
 
