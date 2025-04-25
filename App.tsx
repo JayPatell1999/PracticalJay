@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import AppNavigator from './navigation/AppNavigator';
 import { initDB } from './utils/database';
-import notifee, { AndroidImportance } from '@notifee/react-native';
+// import notifee, { AndroidImportance } from '@notifee/react-native';
 
 export default function App() {
   useEffect(() => {
@@ -15,16 +15,16 @@ export default function App() {
       });
 
     // Setup Notifee notification permissions and channel
-    async function setupNotifications() {
-      await notifee.requestPermission();
-      await notifee.createChannel({
-        id: 'medicines',
-        name: 'Medicine Reminders',
-        importance: AndroidImportance.HIGH,
-      });
-    }
+    // async function setupNotifications() {
+    //   await notifee.requestPermission();
+    //   await notifee.createChannel({
+    //     id: 'medicines',
+    //     name: 'Medicine Reminders',
+    //     importance: AndroidImportance.HIGH,
+    //   });
+    // }
 
-    setupNotifications();
+    // setupNotifications();
   }, []);
 
   return <AppNavigator />;

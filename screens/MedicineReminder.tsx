@@ -6,9 +6,12 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
+  PermissionsAndroid,
+  Platform,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { scheduleReminder } from '../utils/scheduleReminder';
+import { NativeModules } from 'react-native';
+const { ReminderModule } = NativeModules;
 
 const MedicineReminder = () => {
   const [medicineName, setMedicineName] = useState('');
@@ -17,7 +20,7 @@ const MedicineReminder = () => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
 
-  const handleSetReminder = () => {
+  const handleSetReminder = async () => {
     if (!medicineName.trim()) {
       Alert.alert('❗ Please enter a medicine name');
       return;
@@ -33,17 +36,36 @@ const MedicineReminder = () => {
     );
 
     const now = new Date();
-    const minValidTime = new Date(now.getTime() + 15 * 60 * 1000);
+    const minValidTime = new Date(now.getTime() + 1 * 60 * 1000);
     if (selectedDateTime < minValidTime) {
       Alert.alert('⏰ Please choose a time at least 15 minutes from now.');
       return;
     }
 
-    scheduleReminder(medicineName, selectedDateTime);
-    Alert.alert('✅ Reminder set successfully!');
-    setMedicineName('');
-    setDate(new Date());
-    setTime(new Date());
+    // Request notification permission (Android 13+)
+    if (Platform.OS === 'android' && Platform.Version >= 33) {
+      const granted = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS
+      );
+      if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+        Alert.alert('⚠️ Notification permission denied');
+        return;
+      }
+    }
+
+    // 🔥 Call native module here
+    try {
+      ReminderModule.scheduleNativeReminder(
+        medicineName,
+        selectedDateTime.getTime()
+      );
+      Alert.alert('✅ Reminder set successfully!');
+      setMedicineName('');
+      setDate(new Date());
+      setTime(new Date());
+    } catch (error) {
+      Alert.alert('❌ Failed to schedule reminder:', String(error));
+    }
   };
 
   return (

@@ -1,19 +1,30 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, Dimensions } from 'react-native';
-import { fetchSessions } from '../utils/database';
+import { View, Text, FlatList, StyleSheet, Dimensions, ActivityIndicator } from 'react-native';
+import { getAllSessions } from '../hooks/SessionModule';
 
 const { width } = Dimensions.get('window');
 
+interface SessionData {
+  activity: string;
+  duration: string;
+  distance: string;
+  light: string;
+  pressure: string;
+  timestamp?: string;
+}
+
 const HistoryScreen = () => {
-  const [sessions, setSessions] = useState<any[]>([]);
+  const [sessions, setSessions] = useState<SessionData[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchSessions()
-      .then(setSessions)
-      .catch(console.log);
+    getAllSessions((result: SessionData[]) => {
+      setSessions(result);
+      setLoading(false);
+    });
   }, []);
 
-  const renderItem = ({ item }: { item: any }) => (
+  const renderItem = ({ item }: { item: SessionData }) => (
     <View style={styles.card}>
       <View style={styles.row}>
         <Text style={styles.label}>🏃 Activity</Text>
@@ -35,21 +46,24 @@ const HistoryScreen = () => {
         <Text style={styles.label}>🌡 Pressure</Text>
         <Text style={styles.value}>{item.pressure} hPa</Text>
       </View>
-      {item.timestamp && (
-        <Text style={styles.timestamp}>
-          📅 {new Date(item.timestamp).toLocaleString()}
-        </Text>
-      )}
     </View>
   );
+
+  if (loading) {
+    return (
+      <View style={styles.loaderContainer}>
+        <ActivityIndicator size="large" color="#0000ff" />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>📜 Activity History</Text>
 
       <FlatList
-        data={sessions}
-        keyExtractor={(item, index) => item?.id?.toString() ?? index.toString()}
+        data={[...sessions].reverse()}
+        keyExtractor={(item, index) => index.toString()}
         renderItem={renderItem}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
@@ -69,6 +83,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
+    backgroundColor: '#F2F4F8',
+  },
+  loaderContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
     backgroundColor: '#F2F4F8',
   },
   title: {
@@ -105,12 +125,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#111827',
     fontWeight: '600',
-  },
-  timestamp: {
-    fontSize: 12,
-    color: '#9CA3AF',
-    marginTop: 12,
-    textAlign: 'right',
   },
   emptyContainer: {
     flex: 1,

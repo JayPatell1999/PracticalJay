@@ -45,7 +45,7 @@
             android:value="AIzaSyCKaory6yuw825HqjpSipQWYKVHPSQua4w"/>
 
         <service android:name="io.invertase.notifee.HeadlessService" android:exported="false"/>
-        
+         <receiver android:name=".notification.AlarmReceiver" />
     </application>
 
 </manifest>

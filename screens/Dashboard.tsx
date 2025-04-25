@@ -1,14 +1,18 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView,
-  PermissionsAndroid
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  SafeAreaView,
+  ScrollView,
+  PermissionsAndroid,
 } from 'react-native';
-import { useSensors } from '../hooks/useSensors'; 
+import { useNativeSensors as useSensors } from '../hooks/useNativeSensors';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { insertSession } from '../utils/database';
-
+import { insertSession } from '../hooks/SessionModule'; 
 
 type DashboardScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Dashboard'>;
 
@@ -26,13 +30,19 @@ const Dashboard = () => {
   const navigation = useNavigation<DashboardScreenNavigationProp>();
 
   const { accel, light, pressure } = useSensors();
+  const accelRef = useRef(accel);
+
   const [isTracking, setIsTracking] = useState(false);
   const [activity, setActivity] = useState('Stationary');
   const [startTime, setStartTime] = useState<number | null>(null);
   const [duration, setDuration] = useState('00:00:00');
   const [distance, setDistance] = useState('0.0 km');
 
-  // Request location permission
+  // Keep latest accel value
+  useEffect(() => {
+    accelRef.current = accel;
+  }, [accel]);
+
   const requestLocationPermission = async () => {
     try {
       const granted = await PermissionsAndroid.request(
@@ -41,7 +51,7 @@ const Dashboard = () => {
 
       if (granted === PermissionsAndroid.RESULTS.GRANTED) {
         console.log('Location permission granted');
-        startSession(); // Start the session once permission is granted
+        startSession();
       } else {
         console.log('Location permission denied');
       }
@@ -50,26 +60,18 @@ const Dashboard = () => {
     }
   };
 
-  // Start session
   const startSession = () => {
     setStartTime(Date.now());
     setIsTracking(true);
   };
 
-  // Stop session
-  // const stopSession = () => {
-  //   setIsTracking(false);
-  //   setStartTime(null);
-  //   setDuration('00:00:00');
-  //   setDistance('0.0 km');
-  //   setActivity('Stationary');
-  // };
   const stopSession = async () => {
     setIsTracking(false);
     setActivity('Stationary');
-  
+
     if (duration !== '00:00:00') {
       try {
+        // Save the session using the `insertSession` function from your hooks
         console.log('Saving session:', { activity, duration, distance, light, pressure });
         await insertSession(activity, duration, distance, light.toString(), pressure.toString());
         console.log('Session saved!');
@@ -77,15 +79,16 @@ const Dashboard = () => {
         console.log('Error saving session:', err);
       }
     }
-  
+
+    // Reset session details after stopping
     setStartTime(null);
     setDuration('00:00:00');
     setDistance('0.0 km');
   };
 
-  // Track duration
   useEffect(() => {
     if (!isTracking || !startTime) return;
+
     const interval = setInterval(() => {
       const now = Date.now();
       const diff = Math.floor((now - startTime) / 1000);
@@ -94,22 +97,19 @@ const Dashboard = () => {
       const s = (diff % 60).toString().padStart(2, '0');
       setDuration(`${h}:${m}:${s}`);
 
-      // Fake distance calc: increase 0.01 km every 5 sec if walking/running
-      if (diff % 5 === 0) {
-        const isMoving = getActivityType(accel) !== 'Stationary';
-        if (isMoving) {
-          setDistance((prev) => {
-            const newVal = (parseFloat(prev) + 0.01).toFixed(2);
-            return `${newVal} km`;
-          });
-        }
-      }
+      const activityNow = getActivityType(accelRef.current);
+      setActivity(activityNow);
 
-      setActivity(getActivityType(accel));
+      if (diff % 5 === 0 && activityNow !== 'Stationary') {
+        setDistance((prev) => {
+          const newVal = (parseFloat(prev) + 0.01).toFixed(2);
+          return `${newVal} km`;
+        });
+      }
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isTracking, startTime, accel]);
+  }, [isTracking, startTime]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -155,19 +155,24 @@ const Dashboard = () => {
             <Text style={styles.buttonText}>✋ Stop</Text>
           </TouchableOpacity>
         </View>
+
         <TouchableOpacity
-        style={styles.reminderButton}
-        onPress={() => navigation.navigate('MedicineReminder')}
+          style={styles.reminderButton}
+          onPress={() => navigation.navigate('MedicineReminder')}
         >
-  <Text style={styles.buttonText}>💊 Set Medicine Reminder</Text>
-</TouchableOpacity>
-        <TouchableOpacity style={styles.gpsButton}
-        onPress={() => navigation.navigate('Tracking')}
+          <Text style={styles.buttonText}>💊 Set Medicine Reminder</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.gpsButton}
+          onPress={() => navigation.navigate('Tracking')}
         >
           <Text style={styles.buttonText}>📍 Use GPS to Track</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.historyButton}
-        onPress={() => navigation.navigate('History')}
+
+        <TouchableOpacity
+          style={styles.historyButton}
+          onPress={() => navigation.navigate('History')}
         >
           <Text style={styles.buttonText}>📜 View History</Text>
         </TouchableOpacity>
@@ -178,43 +183,70 @@ const Dashboard = () => {
 
 export default Dashboard;
 
-// styles (same as before)
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#F2F4F8' },
   container: { padding: 20, alignItems: 'center' },
   header: { fontSize: 28, fontWeight: '700', marginBottom: 30, color: '#333' },
   card: {
-    width: '100%', backgroundColor: '#fff', borderRadius: 16,
-    padding: 20, marginBottom: 30, shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1,
-    shadowRadius: 6, elevation: 5,
+    width: '100%',
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 30,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 5,
   },
   row: { flexDirection: 'row', justifyContent: 'space-between', marginVertical: 10 },
   label: { fontSize: 18, color: '#666' },
   value: { fontSize: 18, fontWeight: '600', color: '#000' },
   buttonRow: {
-    flexDirection: 'row', width: '100%', justifyContent: 'space-between', marginBottom: 20,
+    flexDirection: 'row',
+    width: '100%',
+    justifyContent: 'space-between',
+    marginBottom: 20,
   },
   startButton: {
-    flex: 1, backgroundColor: '#4CAF50', padding: 15,
-    borderRadius: 12, marginRight: 10, alignItems: 'center',
+    flex: 1,
+    backgroundColor: '#4CAF50',
+    padding: 15,
+    borderRadius: 12,
+    marginRight: 10,
+    alignItems: 'center',
   },
   stopButton: {
-    flex: 1, backgroundColor: '#F44336', padding: 15,
-    borderRadius: 12, marginLeft: 10, alignItems: 'center',
+    flex: 1,
+    backgroundColor: '#F44336',
+    padding: 15,
+    borderRadius: 12,
+    marginLeft: 10,
+    alignItems: 'center',
   },
   historyButton: {
-    width: '100%', backgroundColor: '#2196F3',
-    padding: 15, borderRadius: 12, alignItems: 'center', marginBottom: 20,
+    width: '100%',
+    backgroundColor: '#2196F3',
+    padding: 15,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginBottom: 20,
   },
   gpsButton: {
-    width: '100%', backgroundColor: '#FF9800',
-    padding: 15, borderRadius: 12, alignItems: 'center', marginBottom: 20,
+    width: '100%',
+    backgroundColor: '#FF9800',
+    padding: 15,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginBottom: 20,
   },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
   reminderButton: {
-    width: '100%', backgroundColor: '#9C27B0',
-    padding: 15, borderRadius: 12, alignItems: 'center', marginBottom: 20,
+    width: '100%',
+    backgroundColor: '#9C27B0',
+    padding: 15,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginBottom: 20,
   },
-  
 });
