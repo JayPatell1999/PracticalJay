@@ -30,7 +30,7 @@ class ReminderModule(private val reactContext: ReactApplicationContext) :
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         alarmManager.setExactAndAllowWhileIdle(
             AlarmManager.RTC_WAKEUP,
-            timestamp.toLong() - 1 * 60 * 1000,  // 15 minutes before
+            timestamp.toLong() - 15 * 60 * 1000,  // 15 minutes before
             pendingIntent
         )
     }

@@ -36,7 +36,7 @@ const MedicineReminder = () => {
     );
 
     const now = new Date();
-    const minValidTime = new Date(now.getTime() + 1 * 60 * 1000);
+    const minValidTime = new Date(now.getTime() + 15 * 60 * 1000);
     if (selectedDateTime < minValidTime) {
       Alert.alert('⏰ Please choose a time at least 15 minutes from now.');
       return;
